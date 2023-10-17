@@ -1,0 +1,15 @@
+{
+    "out": "(: join(map(grep($. '(: !empty($item.syntax) :)') 'helper_section') '\n\n') :)",
+    "helper_section": "(: join(($. -> 'helper') '\n')  :)",
+    "helper": [
+        "(: &('## ' ($index -> 'escape')) :)",
+        "",
+        "(: &('`' $item.syntax '`') :)",
+        "",
+        "(: &('Returns: ' ($item.returns -> 'escape') ) :)",
+        "",
+        "(: join(map($item.description 'escape') '\n') :)",
+        "(: ?(!empty($item.extra_docs) &('\n' $item.extra_docs )) :)"
+    ],
+    "escape": "(: replace(fne($item $.) '/([_#])/g' '\\\\$1') :)"
+}

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DTL - Data Transformation Language!</title>
+    <link rel="stylesheet" href="https://unpkg.com/pollen-css" /> 
+    <link rel="stylesheet" href="css/dtl-site.css">
+    <script src="js/dtl-transform-browser.crypto.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js" integrity="sha512-6ts6Fu561/yzWvD6uwQp3XVYwiWNpWnZ0hdeQrETqtnQiGjTfOS06W76aUDnq51hl1SxXtJaqy7IsZ3oP/uZEg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="js/pretty.js" charset="utf-8"></script>
+    <script src="js/transformer.js" charset="utf-8"></script>
+    <script src="js/examples.js" charset="utf-8"></script>
+  </head>
+  <body>
+      <div id="container">
+            <div id="headline">
+            <div id="logo"><span class="bigarrow">&rarr;</span><span class="dtllogo">DTL</span></div>
+            <h1 id="title">
+              Data Transformation Language 
+            </h1>
+            </div>
+      </div>
+      <div id="navigation">
+          <a href="#about" title="What's this whole DTL thing about anyway?">About</a>
+          <a href="#TryDTL" title="Try DTL right now, in your browser!">Try DTL</a>
+          <a href="#Why" title="Why should you use DTL?">Why?</a>
+          <a href="#docs" title="Just, like, RTFM, man.">Docs</a>
+          <a href="https://www.npmjs.com/package/dtl-js" target="_blank" title="View the DTL module on npmjs.com.">npm</a>
+          <a href="https://gitlab.com/jk0ne/DTL" target="_blank" title="Check out the DTL git repo!">Git</a>
+      </div>
+    <div class="main-body">
+        <a name="about"></a>
+        <section class="section">
+            <div class="text-container">
+                <div class="text-block">
+                    <div>
+                    <h2>What is DTL?</h2>
+    <p>DTL is a powerful data manipulation toolset that allows you to extract, manipulate, and transform data on the command line, in your node.js code, on the server, or even in the browser. You can use DTL to describe how to transform one set of data into another, validate input data, or perform complex calculations.</p>
+
+    <p>You can try it by simply installing it with npm or yarn:</p>
+
+                    <div class="code">
+ $ yarn global add dtl-js 
+
+ ## or
+
+ $ npm install -g dtl-js
+                    </div>
+    
+                    <p> OR you can try right now in your browser <a href="#TryDTL">below</a>.</p>
+                    <p>Beginning with version 5.0.0, DTL performs numeric operations using arbitrary percision arithmetic by default. This means the math calculations you perform in DTL are going to be exactly correct. Say goodbye to <a href="https://floating-point-gui.de/" target="_blank">floating-point math errors</a>.  (Not sure what this means? Try entering <span class="code">0.1 + 0.2</span> in your browser console or in node.js)  
+                    <p>DTL also includes powerful CLI tools for transforming data in bulk (<span class="code">dtl</span>) and for exploring the syntax (<span class="code">dtlr</span>).</p>
+
+    <p>The <span class="code">dtl</span> command line tool lets you process data in bulk, sifting, sorting, grouping and performing complex data manipulation. It's great for things like data migration, batch processing or cross-application bulk data transformation.</p>
+    <p>The <span class="code">dtl</span> tool is like having all the *nix text tools (like <span class="pre">grep</span>, <span class="sort">sort</span> <span class="pre">awk</span>, <span class="pre">sed</span>, <span class="pre">cut</span> etc.) for your complex data structures, and works with JSON, yaml, and csv data.</p>
+                    <p>Finally, the <span class="code">dtlr</span> REPL tool has built-in help and is great for exploring your data and trying things out in the terminal.</p>
+                    <h3>TL;DR</h3>
+                    <a href="images/dtlr-demo.gif" target="_blank"><img id="dtlr-repl" src="images/dtlr-demo.gif" alt="dtlr REPL demo"/></a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <a name="TryDTL"></a>
+        <div id="transformer_block">
+            <section class="section">
+                <div class="text-container">
+                    <div class="text-block">    
+                        <h2>Try it out!</h2>
+                        <p>You can try DTL below. Select an example to auto-fill with sample data and related DTL transform, then click
+                            the button to apply the DTL transform. Your result will be displayed in the Result box. (<b>Pro tip:</b> <i>Try editing the transform or input data to change the result.</i>)</p>
+                        <p>Load an example: <select id="transformer_example_select">
+                            <option value="browser_input">-</option>
+                        </select>
+                        </p>
+                        <div class="callout">
+                            <p id="example-description">
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <a name="trydtlui"></a>
+                <div class="section" id="transformer-top">
+                    <div class="container">
+                        <div class="box-label">Input data</div>
+                        <div id="input-block">
+                            <div class='editor' id="input_data_editor"></div>
+                            <div class="expander" id="input-data-expander"></div>
+                        </div>
+                    </div>
+                    <div id="arrow">
+                        <span class="right_arr">&rarr;</span><span class="down_arr">&darr;</span>
+                    </div>
+                    <div class="container">
+                        <div class="box-label">DTL Transform</div>
+                        <div class='editor' id="transform_editor"></div>
+                    </div>
+                </div>
+
+                <div class="section" id="go-button">
+                    <span class="down_arr">&darr;</span>
+                    <button id="dtl-go-button"><span style="white-space: nowrap">DTL.apply(input, transform)</span></button>
+                    <span class="down_arr">&darr;</span>
+                </div>
+            </section>
+
+            <div class="section">
+                <div class="container">
+                    <div class="box-label">Result data</div>
+                    <div class='editor' id="result_editor"></div>
+                </div>
+            </div>
+        </div>
+
+        <a name="Why"></a>
+        <section class="section">
+            <div class="text-container">
+                <div class="text-block">
+                    <div>
+    <h2>Why DTL?</h2>   
+
+    <p>One of the key advantages of DTL is its compatibility with JavaScript, which means you can use it anywhere you can use JavaScript. DTL is also incredibly versatile and can be used to manipulate data in a variety of scenarios, including handling input data from forms or API calls and converting between data formats.</p>
+    <p>DTL is a secure and easy-to-use toolset that lets you define how to manipulate data without writing code. Because DTL has no access to the larger environment, no filesystem access, and no library access, it's a fundamentally safe way to implement complicated data transformations and calculations, even if those calculations come from a third party.</p>
+    <p>As of 5.0.0 of DTL, all math is done using arbitrary precision arithmetic (using <a href="https://github.com/MikeMcl/bignumber.js" target="_blank">bignumber.js</a>) This means your math calculations in DTL are accurate (more accurate than standard Javascript) and will produce exactly the correct results.</p>
+    <p>Compared to raw code, DTL is more portable, secure, and easy to use. It offers a more secure approach to data manipulation by restricting its access to the larger environment. This feature makes it an ideal choice for developers who need to handle sensitive data or work with data from untrusted sources. Additionally, DTL's portability allows you to put your calculations wherever you need them. They can be transfered between server and browser safely, they can be stored in a database or anywhere that JSON can be stored, giving you maximum flexibility and consistency across your application.</p>
+    <p>DTL also gives you easy ways to perform complex tasks which would require significantly more complex and potentially bug-prone code.  It's <span class="code">grep()</span> <a href="https://gitlab.com/jk0ne/DTL/-/blob/master/docs/DTL-Helpers.md#grep" target="_blank">function</a>, for example, makes it supremely easy to extract the specific data you're interested in regardless of how complex the rules are to find it.</p>
+
+    <p>In short, <b>It's better than raw code because it's portable, secure, and easy to use.</b></p>
+
+    <p>The DTL CLI's versatility and compatibility with multiple data formats, such as JSON, YAML, and CSV, make it an excellent tool for data extraction, transformation, and loading (ETL) tasks. Its CLI tool, dtl, allows you to work with complex data structures as easily as text tools like grep and awk allow you to work with text.</p>  
+
+    <p>If you're looking for a powerful data manipulation toolset that works seamlessly with JavaScript and provides CLI tools for batch processing and real-time data manipulation, DTL is the perfect choice for you.</p>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+        <a name="docs"></a>
+        <section class="section">
+            <div class="text-container">
+                <div class="text-block">
+                    <div>
+                    <h2>DTL Docs</h2>
+
+                    <h3>How do I get DTL?</h3>
+                    <p>Installing DTL is easy...</p>
+                    <div class="code">
+ $ yarn global add dtl-js 
+
+ ## or
+
+ $ npm install -g dtl-js
+                    </div>
+
+                    <p>To use DTL in your site or browser-based app, simply use the <span class="code">dtl-transform-browser.min.js</span> from the npm package, or include it from the jsdelivr.net CDN: </p>
+                    <div class="bigcode">
+                        <div class="code">
+&lt;script src="https://cdn.jsdelivr.net/npm/dtl-js/src/js/dist/dtl-transform-browser.min.js"&gt;
+&lt;/script&gt;
+&lt;script&gt;
+    let dtl = new DTL();
+    let result = dtl.apply(input_data, transform);
+&lt;/script&gt;
+                        </div>
+                    </div>
+
+                    <h3>Usage</h3>
+                    
+                    <p>To use DTL to experiment, you can load the <span class="code">dtlr</span> REPL environment by issuing the following command:</p>
+                    <div class="code">
+ $ dtlr
+                    </div>
+                    <p>Once the REPL environment is loaded, you can enter the command <span class="code">.help</span> to get general help, or <span class="code">.help</span> followed by the name of a helper function to get help on that function, for example:<span class="code">.help grep</span> will show you the documentation for the <span class="code">grep</span> function.</p>
+
+                    <h3>How do I use it in my code?</h3>
+                    <p>To use DTL in your code, simply <span class="code">require</span> the DTL module in your code:</p>
+                    <div class="bigcode">
+<div class="code">
+ const DTL = require("dtl-js");
+
+ let transform = { 
+                    "out": "(: $. :)"
+                 };
+
+ let input = { /* your input data */ };
+    
+ let dtl = new DTL();
+ let result = dtl.apply(input, transform);
+
+</div>
+                    </div>
+                    <p>You can browse the <a href="https://www.npmjs.com/package/dtl-js" target="_blank">DTL npm page</a> for a longer example.</p>
+                    <h3>How do I use the dtl CLI tool</h3>
+                    <p>The <span class="code">dtl</span> command line tool allows you to apply complex (or simple) DTL transforms to data on the command line without writing any code.  It understands JSON, JSONLines, YAML and CSV data for both input and output. Issue the command below for help:</p>
+                    <div class="code">
+ $ dtl -h
+                    </div>
+
+                    <p>To convert data from yaml to JSON:</p>
+                    <div class="bigcode">
+                    <div class="code">
+ $ dtl -o data.json data.yaml
+                    </div>
+                    </div>
+
+                    <p>To convert data from JSON to yaml:</p>
+                    <div class="bigcode">
+                    <div class="code">
+ $ dtl -o new.yaml data.json
+                    </div>
+                    </div>
+
+                    <p>Take JSON input on stdin, and output YAML on stdout</p>
+                    <div class="bigcode">
+                    <div class="code">
+ $ dtl -I json -O yaml
+                    </div>
+                    </div>
+
+                    <p>To extract names from a list of people</p>
+                    <div class="bigcode">
+                    <div class="code">
+ $ dtl -e 'map($people "(: $item.name :)")' astros.json
+                    </div>
+                    </div>
+
+                    <h3>More DTL docs</h3>
+
+                    <p>DTL has extensive documentation on its syntax and helpers. You can find information on the expression syntax <a href="https://gitlab.com/jk0ne/DTL/-/blob/master/docs/DTL-Expressions.md" target="_blank">here</a> and information about the helper functions within <b>DTL</b> in the <a href="https://gitlab.com/jk0ne/DTL/-/blob/master/docs/DTL-Helpers.md" target="_blank">helper reference</a>. Some <a href="https://gitlab.com/jk0ne/DTL/-/blob/master/docs/DTL-Advanced.md" target="_blank">docs on some more advanced topics</a> exists. You can also try out dtl and get help in the <span class="code">dtlr</span> command line tool.</p>
+                    </p>
+
+                    <h3>Talk to us!</h3>
+                    <p>If you would like to chat about DTL and related topics, you can find us on <a href="https://discord.gg/ECA4H3PuAE" target="_blank">Discord here.</a></p>
+                    <h3>Who made this thing?!?</h3>
+                    <p>That'd be mainly this guy, <a href="https://gitlab.com/jk0ne/" target="_blank">Jay Kuri</a> with a little help from his <a href="https://gitlab.com/jk0ne/DTL/-/graphs/master" target="_blank">friends</a></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <script>
+        let t_words = [
+            "transformation",
+            "templating",
+            "translation",
+            "transfiguration",
+            "transposing"
+        ];
+        let transformer = new Transformer();
+        transformer.setup_editors();
+        document.querySelectorAll('#dtl-go-button')[0].onclick=transformer.do_transformation.bind(transformer);
+        document.querySelectorAll('#arrow')[0].onclick=transformer.do_transformation.bind(transformer);
+        transformer.populate_examples();
+        document.querySelectorAll('#transformer_example_select')[0].onchange=transformer.example_selector_changed.bind(transformer);
+
+        function expand_input() {
+            document.querySelectorAll('#transformer-top')[0].classList.toggle('wide');
+        }
+
+        document.querySelectorAll('#input-data-expander')[0].onclick=expand_input;
+    </script>
+    </body>
+</html>

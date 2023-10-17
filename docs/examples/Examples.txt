@@ -1,0 +1,26 @@
+This file contains some examples of how to accomplish certain things using DTL.
+
+1) Decode PHP-style foo[bar][baz][bat] keys into nested data structures:
+    Input data:
+    {
+        "associate[name]": "Sand Creek, Inc. (136)",
+        "associate[number]": "15-0202",
+        "associate[crop][name]": "Wheat, hard red winter (Triticum aestivum) - Byrd",
+        "associate[crop][number]": "R14-1-136",
+        "associate[crop][lot_number]": "14-136C",
+        "county": "Kiowa",
+        "seed_class": "registered",
+        "item[0]": 0.99,
+        "item[1]": 0.0072,
+        "item[2]": 0,
+        "item[3]": 0.9928,
+        "weed_result": 0
+    }
+
+    Transform:
+    {
+        "out": "(: unflatten({map($. 'handle_brackets')}) :)",
+        "handle_brackets": "(: [ ($index =~ s/'(\\\\]?\\\\[)'/'\\.'/g) =~ s/'\\]$'/''/ $item ] :)"   
+    }
+
+    

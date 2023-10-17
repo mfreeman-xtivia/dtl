@@ -1,0 +1,7 @@
+src/js/profile
+docs/examples
+# we don't need to include the website in the npm module
+docs/website
+# don't package up the non-minified browser versions.
+src/js/dist/dtl-transform-browser.crypto.js
+src/js/dist/dtl-transform-browser.js

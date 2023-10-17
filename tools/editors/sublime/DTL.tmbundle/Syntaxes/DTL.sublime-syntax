@@ -1,0 +1,115 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+name: DTL
+file_extensions:
+  - transform
+scope: source.DTL
+extends: Packages/JavaScript/JSON.sublime-syntax
+
+contexts:
+  comments:
+    - match: (/\*)
+      captures:
+        1: comment
+      push:
+        - match: (\*/)
+          captures:
+            1: comment
+          pop: true
+    - match: (//)
+      captures:
+        1: comment
+      push:
+        - match: "$" 
+          pop: true
+
+  main:
+    - match: "\"(\\(:)"
+      scope: punctuation.section.interpolation.begin
+      embed: dtl_embedded_expression
+      escape:  "(:\\)\")"
+      escape_captures:
+        1: punctuation.section.interpolation.end
+
+  dtl_expression:
+    - meta_scope: meta.interpolation
+    - include: comments
+    - match: '\\.'
+      scope: constant.character.escape.untitled
+    - match: '(\$)'
+      scope: punctuation.definition.variable
+      push: dtl_variable
+    - match: '([=><&+\-\*\/\!\|]+)'
+      scope: keyword.operator
+    - match: '[\+\-]\?[0-9][0-9\.]+'
+      scope: constant.numeric
+    - match: '[\[\{\}\]]'
+      scope: meta.braces
+    - match: '(true|false|undefined)'
+      scope: constant.language
+    - match: '([a-zA-Z0-9_&]+)(\()' 
+      captures:
+        1: support.function
+        2: punctuation.section.group.begin
+      push:
+        - match: "[)]"
+          pop: true
+        - include: dtl_expression
+    - match: "[']"
+      push:
+        - meta_scope: string.quoted.double
+        - match: "[']"
+          pop: true
+        - match: "(\\(:)"
+          scope: punctuation.section.interpolation.end
+          push: dtl_embedded_expression
+    - match: "[`]"
+      push:
+        - meta_scope: string.quoted.triple
+        - match: "[`]"
+          pop: true
+        - match: "(\\(:)"
+          scope: punctuation.section.interpolation.end
+          push: dtl_embedded_expression
+    - match: '[0-9]+([\.][0-9]+)?'
+      scope: constant.numeric
+    - match: '\w'
+      scope: invalid.illegal
+
+
+  dtl_embedded_expression:
+    - match: "(:\\))"
+      scope: punctuation.section.interpolation.end
+      pop: true
+    - include: dtl_expression
+
+  dtl_var_bracket_embed:
+    - match: '(\])(\.)'
+      captures:
+        1: punctuation.section.brackets.end
+        2: punctuation.accessor
+      set: dtl_variable
+    - match: '\]'
+      scope: punctuation.section.brackets.end
+    - include: dtl_expression
+
+  dtl_variable:
+    - match: '([a-zA-Z0-9_]+)(\[)'
+      captures:
+        1: variable.other.readwrite
+        2: punctuation.section.brackets.begin 
+      push: dtl_var_bracket_embed
+    - match: '([a-zA-Z0-9_]+)(\.)'
+      captures: 
+        1: variable.other.readwrite
+        2: punctuation.accessor
+      set: dtl_variable
+    - match: '(\.(?![a-zA-Z0-9_]))'
+      captures: 
+        1: variable.other.readwrite
+      pop: true
+    - match: '([a-zA-Z0-9_]+)'
+      captures: 
+        1: variable.other.readwrite
+      pop: true

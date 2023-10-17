@@ -1,0 +1,444 @@
+/* =================================================
+ * Copyright (c) 2015-2022 Jay Kuri
+ *
+ * This file is part of DTL.
+ *
+ * DTL is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * DTL is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with DTL; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * =================================================
+ */
+{
+    let util = require('util');
+    // THIS MUST BE COMPILED WITH --CACHE OR THINGS LIKE SORT GO EXPONENTIAL.
+    let order_of_op_values = {
+        "+": 1,
+        "-": 1,
+        "*": 2,
+        "/": 2,
+        "%": 2,
+        "^": 3,
+        "()": 4
+    };
+
+    function compare_operator_order(op1, op2) {
+        let res= order_of_op_values[op1] - order_of_op_values[op2];
+        // console.log("cmp:", op1, op2, res); 
+        return res;
+
+    }
+
+    function helper_func(helper, args) {
+        return {
+            "type": "helper",
+            "helper_name": helper,
+            "args": args
+        }
+    }
+
+    function variable_expression(keys, data) {
+        var res = {
+            "type": 'variable',
+            "keys": keys
+        };
+        if (typeof data != 'undefined') {
+            res.data = data;
+        }
+        return res;
+    }
+
+    function get_operator(op) {
+        var args = [].slice.call(arguments);
+        args.shift();
+        return {
+            "type": 'operation',
+            "op": op,
+            "args": args
+        };
+    }
+
+    // Check if a mathematical operation is mergeable
+    function math_op_is_mergeable(op) {
+        if (op == '/' ||op == '*' || op == '+' || op == '-' || op == '%') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function parse_integer(thing, base) {
+        let res = options.parseInt(thing, base);
+        //let res = parseInt(thing, base);
+        return res;
+    }
+
+    function parse_float(thing, base) {
+        return options.parseFloat(thing, base);
+    }
+
+
+    /**
+     * When dealing with mathematical operations in DTL, the function `merge_math_args`
+     * is responsible for taking into account the order of operations and building an
+     * Abstract Syntax Tree (AST) that accurately represents the mathematical expression.
+     *
+     * DTL mathematical expressions are originally expressed in infix notation, which
+     * needs to be converted into a format that can be processed. This function aids in
+     * that conversion, producing an AST that can be conceptualized as Polish (prefix)
+     * notation: an operator followed by operands.
+     *
+     * The PEG parser processes the math lines from right to left, meaning the last term is
+     * encountered/processed first, and each new term and operation works backward from there.
+     * This function adjusts the nested structure accordingly as each new term arrives.
+     * Since we don't know when we are at the last operation, the structure needs to be
+     * built correctly as we go.
+     *
+     * Each level of nesting in the AST represents a "mathematical term," a self-contained
+     * calculation. The 'last_op' flag is used to identify the term that was most recently
+     * added to the AST, guiding where the new operation fits into the existing tree.
+     * 
+     * Algorithm steps:
+     * 
+     * 1. A new operation object is created with the new operand and operator.
+     * 2. The most recent term (with 'last_op' flag) in the existing AST is identified.
+     * 3. The new operation is compared against this recent term for precedence.
+     * 4. If the new operation has higher or equal precedence, it "steals" the leftmost
+     *    argument of the most recent term and is inserted in its place.
+     * 5. If the new operation has lower precedence, it becomes the new top-level operation.
+     */
+
+
+    function merge_math_args(left, op, args) {
+      let new_op = {
+        'type': 'operation',
+        'op': op,
+        'args': [ left ]
+      };
+
+      // console.log('new:', new_op.op, new_op.args)
+      // now we need to find our most recently added op.
+      let rest;
+      if(Array.isArray(args)) {
+        rest = args[1];
+      }
+      if ( typeof rest != 'object' || rest.type != 'operation' ) {
+        new_op.args.push(rest);
+        new_op.last_op=true;
+        return new_op;
+      } else {
+          let most_recent_op = rest;
+          let op_stack = [ most_recent_op ];
+          let inserted = false;
+          while (most_recent_op.type == 'operation' && most_recent_op.last_op != true && math_op_is_mergeable(most_recent_op.op)) {
+            // console.log('descending', most_recent_op);
+            most_recent_op = most_recent_op.args[0] 
+            op_stack.push(most_recent_op); 
+          }
+          // first, remove the last_op flag, since it isn't
+          // last_op anymore
+          delete most_recent_op.last_op;
+          
+          // console.log('op_stack', op_stack);
+
+          // we've found our most recent arg. each level
+          // in the op_stack represents a term in our expression
+          // We must walk upwards until we find an
+          // operation that our new op is less important than.
+          let current_term = most_recent_op;
+          while(op_stack.length > 0) {
+            current_term = op_stack.pop();
+            // console.log('searching:', op_stack.length, current_term.op, current_term.args);
+            // if current_term is higher priority than our new_op
+            // we grab the first arg from current_term and add it to our
+            // new_op and then put new_op in that arg's place
+            if (compare_operator_order(new_op.op, current_term.op) >= 0) {
+                new_op.args.push(current_term.args[0]);
+                current_term.args[0] = new_op;
+                inserted = true;
+                // console.log('inserting at', current_term)
+                break;
+            } 
+          }
+          if (inserted == true) {
+            return rest;
+          } else {
+            // if we didn't insert our new op already, then it
+            // has to become the new top-level.
+            new_op.args.push(current_term);
+            return new_op;
+          }
+        }
+    }
+
+    function val(v) {
+        return {
+            "type": 'literal',
+            "value": v
+        };
+    }
+
+}
+
+start
+  = _ parsed:logicals _ { return parsed; }
+  / _ { return undefined; }
+
+logicals
+  = left:operation _ op:logical_ops _ right:logicals { return get_operator(op, left, right); }
+  / operation
+
+operation
+  = transform
+  / left:additive _ op:operator _ right:operation { return get_operator(op,left, right); }
+  / additive
+
+transform
+  = input:additive _ transform:transform_short { return helper_func('transform', [ input, transform ] ) }
+
+additive
+  = left:multiplicative _ op:[+\-\~] ![>\(] rest:(_ right:additive) { return merge_math_args(left, op, rest); }
+    // this next line matches & in all cases except when it's immediately followed by a parenthesized expression
+    // we want that to fall through to the helper  !() says it should not match that thing.
+  / left:multiplicative _ '&' _ !(parenthesized) right:additive { return helper_func('&', [left, right]); }
+  / multiplicative
+
+multiplicative
+  = left:exponential _ op:([\~\*\%]) !"\(" rest:(_ multiplicative) { return merge_math_args(left, op, rest); }
+    // have to handle / specially because it could be regex, we need to exclude things that match regex pattern here
+  / left:exponential _ op:("/") !(reg_escape+ "/") !(parenthesized) rest:(_ multiplicative) { return merge_math_args(left, op, rest); }
+  / exponential
+
+exponential
+  = left:primitives _ op:"^" !("\(") _ right:exponential { return get_operator(op,left, right); }
+  / primitives
+
+primitives
+  = v:literal_values
+  / variable
+  / parenthesized
+  / helper_functions
+  / logical_not
+  / literal_structures
+  / quoted_chars
+  / embeddedvars
+  / regex
+
+
+literal_values "literal value"
+  = v:hard_quoted_characters { return val(v); }
+  / v:quoted_chars { return val(v); }
+  / v:number { return val(v); }
+  / v:booleanValue { return val(v) }
+  / v:undefinedValue { return val(v) }
+  / v:regex { return v; }
+
+variable "variable expression"
+  = "$" "\."? "\{"? keys:variable_keys+ "\}"? { return variable_expression(keys); }
+  / "$" keys:variable_keys+ { return variable_expression([keys]); }
+  / "$" "\."? "\[" _ keys:primitives _ "\]" { return variable_expression([keys]); }
+  / "$\." { return variable_expression([]); }
+  / data:parenthesized keys:variable_keys+ { return get_operator('[.]', data, keys); }
+
+variable_keys
+  = "[" data:hard_quoted_characters closing_bracket { return  data ; }
+  / "[" data:logicals closing_bracket { return data; }
+  / "[" keys:varchars+ closing_bracket { return "" + keys.join(""); }
+  / "{" data:logicals closing_brace { return ''}
+  / "\." keys:varchars+ { return "" + keys.join(""); }
+  / "\*" { return '*'; }
+  / metatoken
+
+metatoken
+  = keys:varchars+ { return "" + keys.join(""); }
+
+parenthesized
+   = "(" _ ex:logicals _ closing_paren { return get_operator("()", ex); }
+   / pairs
+   / "(" ex:arr+ closing_paren { return ex; }
+
+operator "operator"
+  ="<=>" { return "<=>"; }
+  / type:[=!<>] "="+ { return type+"="; }
+  / [<>]
+  / ("..") { return "..";}
+
+logical_ops "logical operator"
+  = "&&"
+  / "||"
+  / "=~"
+
+logical_not
+  = "!" _ ex:primitives { return get_operator("!", ex); }
+
+literal_structures
+   = "[" ex:logicals_list* closing_bracket { return get_operator("[]", ex) }
+   / "{" ls:literal_struct_list* closing_brace { return get_operator("{}", ls); }
+   / "{" _ par:primitives _ closing_brace { return get_operator("{}", par);  }
+   / "{" _ par:primitives* _ closing_brace { return get_operator("{}", par);  }
+
+closing_brace "closing }"
+   = "}"
+
+transform_short
+  = "->" _ transform:logicals { return transform; }
+  / "->" _ transform:metatoken { return transform; }
+
+pairs
+   = _ "(" _ left:logicals _ ":" _ right:logicals _ closing_paren _ { return get_operator(":", left, right) }
+   / _ "(" _ left:logicals _ right:logicals _ closing_paren _ { return get_operator(":", left, right) }
+
+arr
+   = _ ex:logicals ":"? _ { return ex; }
+
+number "number"
+  = negative_number 
+  / "+" pn:positive_numbers { return pn }
+  / positive_numbers
+
+negative_number 
+  = "-" pn:positive_numbers { return (0 - pn); }
+
+positive_numbers
+  = "0x" digits:[A-Fa-f0-9]+ { return parse_integer(digits.join("").toLowerCase(), 16) }
+  / "0o" digits:[0-7]+ { return parse_integer(digits.join(""), 8) }
+  / "0b" digits:[0-1]+ { return parse_integer(digits.join(""), 2) }
+  / digits:[0-9]* dec:[\.] digits2:[0-9]+ { return parse_float(digits.join("") + dec + digits2.join("")); }
+  / digits:[0-9]+ { return parse_integer(digits.join("")); }
+
+_
+  = (whitespace)*
+
+whitespace "whitespace"
+  = eol_comment { return ''; }
+  / [ \t\r\n] { return ''; }
+  / comment
+
+extended_whitespace "whitespace"
+  = eol_comment { return '';}
+  / [ \t\r\n\,]+ { return ''; }
+  / comment
+
+
+__
+  = (extended_whitespace)*
+
+comment
+  = "/*" (!"*/" .)* "*/" { return '';}
+
+eol_comment
+  = "//" (!"\n" .)* { return '';}
+
+booleanValue "boolean"
+  = "true" { return true; }
+  / "false" { return false; }
+
+undefinedValue "undefinedValue"
+  = "undefined" { return undefined; }
+  / "undef" { return undefined; }
+
+
+// We need to revisit whether we expect $blah to return nothing or $blah.  (second rule below)
+
+helper_functions
+  = helper:helperchars+ "(" args:helper_args* closing_paren { return helper_func(helper.join(''), args) }
+
+closing_paren "closing )"
+  = ")"
+
+closing_bracket "closing ]"
+  = "]"
+
+chars
+  = _ chars:char+ _ { if (chars.length) { return chars.join("");} else { return undefined; }}
+
+embeddedvars
+  = _ chars1:char* meta:variable chars2:char* {  return get_operator('&', chars1.join(""), get_operator('&', meta, chars2.join(""))); }
+
+quoted_chars
+  = "\"" quoted:doublequotablechars* "\"" { return quoted.join(""); }
+
+// Quoted regex is deprecated. regex_quoted is a patch for old style matching
+regex_quoted
+  = "m"? "/'" reg:reg_quoted_escape+ "'/" flag:[gimsuy]* { return get_operator('//', reg.join(""), flag.join(""), true, "'"); }
+  / "m"? "/`" reg:reg_backquoted_escape+ "`/" flag:[gimsuy]* { return get_operator('//', reg.join(""), flag.join(""), true, "`");  }
+
+regex
+  = "m"? "/" reg:reg_escape+ "/" flag:[gimsuy]* { return get_operator('//', reg.join(""), flag.join("")); }
+
+reg_quoted_escape
+  = "\\/" { return "/" }
+  / "\\\\" { return "\\" }
+  / [^']
+
+reg_backquoted_escape
+  = "\\/" { return "/" }
+  / "\\\\" { return "\\" }
+  / [^`]
+
+reg_escape
+  = "\\/" { return "/" }
+  / "\\ " { return " " }
+  / [^/ ]
+
+hard_quoted_characters
+  = "\`" quoted:hard_quotablechars* "\`" { return quoted.join("") }
+  / "\'" quoted:singlequotablechars* "\'" { return quoted.join(""); }
+
+// transform_string
+//  = quoted:transform_chars*  { return quoted.join("") }
+
+// transform_chars
+//   = esc:. !(":" ")") { return esc.join(""); }*/
+
+hard_quotablechars
+  = escaped
+  / [^`]
+
+varchars
+  = [^'"\,\.\+\=\>\<\(\)\\\[\]\0-\x1F\x7f\/\:}\{ ]
+
+char
+  = [^'"\(\)\[\]\\\0-\x1F\x7f/ \$]
+  / escaped
+
+solo
+  = [/\(\)\$]
+
+escaped
+  = "\\" escaped:. { return escaped; }
+
+singlequotablechars
+  = escaped
+  / [^']
+
+doublequotablechars
+  = escaped
+  / [^"]
+
+quotableregex
+  = escaped
+  / [^/]
+
+helperchars "helper name"
+  = [a-zA-Z0-9_#\&\^\?\.@\\\u2200-\u22ff]
+
+helper_args
+ = _ res:logicals __ { return res; }
+//  = _ res:parenthesized_item __ { return res }
+
+logicals_list
+  = _ res:logicals __ { return res; }
+
+literal_struct_list
+  = _ res:literal_structures _ { return res; }
+  / pairs
